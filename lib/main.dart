@@ -28,7 +28,7 @@ class MyApp extends StatelessWidget {
         ),
       ),
 
-      // La pantalla inicial de la aplicación es el listado de autopartes
+      // La pantalla inicial de la aplicación es el listado de autopartes visual
       home: ListadoAutopartesScreen(),
 
       // Ocultar la etiqueta de debug en la esquina

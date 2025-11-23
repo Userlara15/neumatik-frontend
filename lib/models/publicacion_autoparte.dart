@@ -41,7 +41,9 @@ class PublicacionAutoparte {
       nombreParte: json['nombre_parte'] as String,
       categoria: json['nombre_categoria'] as String,
       numeroOem: json['numero_oem'] as String?,
-      precio: (json['precio'] as num).toDouble(), // Convierte NUMERIC a double
+      precio: double.parse(
+        json['precio'].toString(),
+      ), // Convierte NUMERIC a String
       condicion: json['condicion'] as String,
       stock: json['stock'] as int,
       ubicacionCiudad: json['ubicacion_ciudad'] as String,

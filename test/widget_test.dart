@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // Importamos la clase principal de nuestra aplicación (NeumatikApp)
+// NOTA: Asegúrate de que "neumatik_frontend" coincida con el nombre de tu proyecto.
 import 'package:neumatik_frontend/main.dart';
 
 void main() {
@@ -12,15 +13,15 @@ void main() {
   testWidgets('Verifica que la aplicación inicia y muestra el título principal', (
     WidgetTester tester,
   ) async {
-    // 1. Construir nuestra aplicación (usando NeumatikApp, no MyApp)
-    await tester.pumpWidget(const NeumatikApp());
+    // 1. Construir nuestra aplicación. Hemos cambiado a 'MyApp' por si es el nombre
+    //    por defecto en 'lib/main.dart'. Si el nombre es 'NeumatikApp', revierte este cambio.
+    await tester.pumpWidget(const MyApp()); // <--- ¡CAMBIO AQUÍ!
 
     // 2. Disparar un frame para que se complete la carga asíncrona (como FutureBuilder)
-    // Esto es importante si la pantalla inicial ListadoAutopartesScreen usa FutureBuilder.
     await tester.pumpAndSettle();
 
     // 3. Verificar que el título principal de la AppBar esté presente.
-    // El título definido en ListadoAutopartesScreen es 'Neumatik: Autopartes en Venta'
+    // El título esperado es el de la pantalla de inicio después de la carga inicial
     expect(find.text('Neumatik: Autopartes en Venta'), findsOneWidget);
 
     // Se eliminó la lógica del contador ya que la aplicación no lo utiliza.

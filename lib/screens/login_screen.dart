@@ -1,10 +1,5 @@
-// lib/screens/login_screen.dart
-
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
-
-// Importamos la pantalla principal (HomeScreen) para navegar despues del login
-import '../screens/home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,162 +10,224 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final AuthService _authService = AuthService();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+
+  final TextEditingController _correoController = TextEditingController();
+  final TextEditingController _contrasenaController = TextEditingController();
 
   bool _isLoading = false;
-  String? _errorMessage;
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
+    _correoController.dispose();
+    _contrasenaController.dispose();
     super.dispose();
   }
 
   Future<void> _handleLogin() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null; // Limpia errores anteriores
-    });
-
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
-
-    // Validación básica
-    if (email.isEmpty || password.isEmpty) {
+    if (_formKey.currentState!.validate()) {
       setState(() {
-        _errorMessage = 'Por favor, ingresa correo y contraseña.';
-        _isLoading = false;
+        _isLoading = true;
       });
-      return;
-    }
 
-    try {
-      // Llama al servicio de autenticación
-      await _authService.login(email, password);
+      final String correo = _correoController.text.trim();
+      final String contrasena = _contrasenaController.text;
 
-      // Si el login es exitoso, navega a la pantalla principal
-      // Usa pushReplacement para que el usuario no pueda volver a la pantalla de login con el botón de atrás
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-        );
+      try {
+        // CORRECCIÓN 1: La función login usa argumentos posicionales
+        final usuarioAutenticado = await _authService.login(correo, contrasena);
+
+        if (mounted) {
+          // CORRECCIÓN 2: Si no hay excepción, el login fue exitoso.
+          // Usamos los datos del objeto retornado.
+
+          final userName = usuarioAutenticado.nombre; //esto no daba
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '🎉 Sesión iniciada con éxito. Bienvenido, $userName!',
+              ),
+              backgroundColor: Colors.teal,
+            ),
+          );
+
+          // CORRECCIÓN 3: Redirigir a la ruta '/home' (o la ruta de Home definida)
+          Navigator.of(
+            context,
+          ).pushNamedAndRemoveUntil('/home', (route) => false);
+        }
+      } catch (e) {
+        if (mounted) {
+          // Captura errores lanzados por el AuthService (ej. Credenciales inválidas)
+          // Se usa replaceFirst para limpiar el prefijo "Exception: " del mensaje.
+          final errorMessage = e.toString().replaceFirst('Exception: ', '');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('❌ Error al iniciar sesión: $errorMessage'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
-    } catch (e) {
-      // Captura y muestra el error de login
-      setState(() {
-        _errorMessage = e.toString().replaceFirst('Exception: ', '');
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
     }
+  }
+
+  // Navega a la pantalla de registro
+  void _navigateToRegister() {
+    // Si tu ruta es '/register' debes usar esa.
+    // Usaremos '/register' como en el ejemplo anterior
+    Navigator.of(context).pushNamed('/register');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // Añadimos un AppBar para consistencia de diseño
       appBar: AppBar(
-        title: const Text('Inicio de Sesión - Neumatik'),
-        centerTitle: true,
+        title: const Text(
+          'Iniciar Sesión',
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: Colors.teal,
       ),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              // Título/Logo
-              const Text(
-                'Acceso al Sistema',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blueAccent,
+          padding: const EdgeInsets.all(24.0),
+          child: Container(
+            padding: const EdgeInsets.all(20.0),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20.0),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
                 ),
-              ),
-              const SizedBox(height: 40),
-
-              // Campo de Correo Electrónico
-              TextField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  labelText: 'Correo Electrónico',
-                  hintText: 'ejemplo@correo.com',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.email),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Campo de Contraseña
-              TextField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Contraseña',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.lock),
-                ),
-              ),
-              const SizedBox(height: 30),
-
-              // Mensaje de Error (si existe)
-              if (_errorMessage != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 15.0),
-                  child: Text(
-                    _errorMessage!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.red,
+              ],
+            ),
+            constraints: const BoxConstraints(maxWidth: 450),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  // Título/Logo
+                  const Text(
+                    'Bienvenido a Neumatik',
+                    style: TextStyle(
+                      fontSize: 32,
                       fontWeight: FontWeight.bold,
+                      color: Colors.teal,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Inicia sesión para continuar',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 16, color: Colors.blueGrey),
+                  ),
+                  const SizedBox(height: 40),
+
+                  // Campo Correo
+                  TextFormField(
+                    controller: _correoController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: InputDecoration(
+                      labelText: 'Correo Electrónico',
+                      prefixIcon: const Icon(
+                        Icons.email_outlined,
+                        color: Colors.teal,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: Colors.teal.shade50,
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty)
+                        return 'El correo es obligatorio.';
+                      if (!value.contains('@'))
+                        return 'Ingresa un correo válido.';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Campo Contraseña
+                  TextFormField(
+                    controller: _contrasenaController,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: 'Contraseña',
+                      prefixIcon: const Icon(
+                        Icons.lock_outline,
+                        color: Colors.teal,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: Colors.teal.shade50,
+                    ),
+                    validator: (value) => value == null || value.length < 6
+                        ? 'La contraseña debe tener al menos 6 caracteres.'
+                        : null,
+                  ),
+                  const SizedBox(height: 30),
+
+                  // Botón de Inicio de Sesión
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : _handleLogin,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 5,
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            'Iniciar Sesión',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                  ),
+                  const SizedBox(height: 15),
+
+                  // Enlace a Registro
+                  TextButton(
+                    onPressed: _navigateToRegister,
+                    child: const Text(
+                      '¿No tienes cuenta? Regístrate aquí',
+                      style: TextStyle(color: Colors.teal),
                     ),
                   ),
-                ),
-
-              // Botón de Inicio de Sesión
-              ElevatedButton(
-                onPressed: _isLoading ? null : _handleLogin,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  backgroundColor: Colors.blueAccent,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2.0,
-                        ),
-                      )
-                    : const Text(
-                        'Iniciar Sesión',
-                        style: TextStyle(fontSize: 18),
-                      ),
+                ],
               ),
-
-              const SizedBox(height: 20),
-
-              // Opcional: Enlace para ir al registro
-              TextButton(
-                onPressed: () {
-                  // TODO: Implementar navegación a la pantalla de registro
-                  print('Ir a Registro');
-                },
-                child: const Text('¿No tienes cuenta? Regístrate aquí.'),
-              ),
-            ],
+            ),
           ),
         ),
       ),

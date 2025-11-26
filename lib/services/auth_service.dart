@@ -82,7 +82,7 @@ class AuthService {
 
         final authResult = UsuarioAutenticado.fromJson(responseBody);
 
-        await _saveToken(authResult.token);
+        await _saveToken(authResult.token); // <<-- Aquí se guarda el token
 
         return authResult;
       } else {

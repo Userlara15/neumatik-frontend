@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 // Importamos el modelo UsuarioAutenticado para el tipado, ya que el servicio lo devuelve.
-import '../models/usuario_autenticado.dart';
+import '../models/usuario_autenticado.dart'; 
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -37,13 +37,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
       try {
         // Tipamos explícitamente el resultado para asegurar el uso del modelo UsuarioAutenticado.
-        final UsuarioAutenticado usuarioAutenticado = await _authService
-            .loginUser(correo: correo, contrasena: contrasena);
+        final UsuarioAutenticado usuarioAutenticado = await _authService.loginUser(
+          correo: correo, 
+          contrasena: contrasena,
+        );
 
         if (mounted) {
           // FIX: Accedemos a la propiedad 'nombre' a través del objeto anidado 'user'
           // Utilizamos nombreCompleto que ya está definido en el modelo Usuario.
-          final userName = usuarioAutenticado.user.nombreCompleto;
+          final userName = usuarioAutenticado.user.nombreCompleto; 
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

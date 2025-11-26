@@ -16,6 +16,8 @@ class AuthService {
   // Constantes para endpoints (COINCIDEN CON EL BACKEND DE EXPRESS.JS)
   final String _loginEndpoint = '/api/auth/login';
   final String _registerEndpoint = '/api/registro';
+  final String _profileEndpoint =
+      '/api/usuario/perfil'; // Nuevo endpoint para el perfil
 
   // --------------------------------------------------------------------------
   // LÓGICA DE PERSISTENCIA (SharedPreferences) - Métodos privados
@@ -63,7 +65,7 @@ class AuthService {
       'nombre': nombre,
       'apellido': apellido,
       'correo': correo,
-      // Se cambia 'contraseña' por 'contrasena' para coincidir con el backend JS
+      // Se usa 'contrasena' para coincidir con el backend JS
       'contrasena': contrasena,
       'telefono': telefono,
       'es_vendedor': esVendedor,
@@ -80,6 +82,7 @@ class AuthService {
       if (response.statusCode == 201) {
         final Map<String, dynamic> responseBody = jsonDecode(response.body);
 
+        // Asumiendo que el campo 'token' se encuentra en el nivel superior del body de respuesta.
         final authResult = UsuarioAutenticado.fromJson(responseBody);
 
         await _saveToken(authResult.token);
@@ -91,17 +94,14 @@ class AuthService {
             'Error desconocido (Código HTTP: ${response.statusCode})';
 
         try {
-          // Intentamos decodificar el JSON de error
           final Map<String, dynamic> responseBody = jsonDecode(response.body);
 
-          // Buscamos mensajes de error típicos
           errorDetail =
               responseBody['message'] ??
               responseBody['detail'] ??
               responseBody['error'] ??
               errorDetail;
         } on FormatException {
-          // El servidor devolvió un error (ej. 500) pero el cuerpo NO era JSON
           errorDetail =
               'Error del servidor, no es formato JSON. Código: ${response.statusCode}';
         }
@@ -109,12 +109,10 @@ class AuthService {
         throw Exception('Fallo al registrar usuario: $errorDetail');
       }
     } on SocketException {
-      // Error de conexión (offline, servidor no responde)
       throw Exception(
         'No se pudo conectar con el servidor. Verifica tu conexión a internet.',
       );
     } catch (e) {
-      // Otros errores (ej. TimeoutException, etc.)
       throw Exception(
         'Ocurrió un error inesperado durante el registro: ${e.toString()}',
       );
@@ -130,11 +128,7 @@ class AuthService {
     required String contrasena,
   }) async {
     final url = Uri.parse('$_baseUrl$_loginEndpoint');
-    final body = jsonEncode({
-      // Se usa 'contrasena' para coincidir con el backend JS
-      'correo': correo,
-      'contrasena': contrasena,
-    });
+    final body = jsonEncode({'correo': correo, 'contrasena': contrasena});
 
     try {
       final response = await http.post(
@@ -163,18 +157,76 @@ class AuthService {
         throw Exception('Fallo al iniciar sesión: $errorDetail');
       }
     } on SocketException {
-      // Error de conexión
       throw Exception(
         'No se pudo conectar con el servidor para iniciar sesión. Verifica tu conexión.',
       );
     } on FormatException {
-      // Error si la respuesta no es JSON (ej. 500 error en el servidor)
       throw Exception(
         'Respuesta inesperada del servidor (formato JSON inválido).',
       );
     } catch (e) {
-      // Otros errores
       throw Exception('Ocurrió un error de conexión: ${e.toString()}');
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // LÓGICA DE PERFIL DE USUARIO
+  // --------------------------------------------------------------------------
+
+  // Obtiene el perfil completo del usuario autenticado (requiere JWT)
+  Future<Map<String, dynamic>> fetchUserProfile() async {
+    final token = await _getToken();
+    if (token == null) {
+      throw Exception('Usuario no autenticado. Inicie sesión primero.');
+    }
+
+    final url = Uri.parse('$_baseUrl$_profileEndpoint');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token', // Enviar el token en el header
+        },
+      );
+
+      if (response.statusCode == 200) {
+        // Respuesta exitosa
+        final Map<String, dynamic> responseBody = jsonDecode(response.body);
+
+        // El backend devuelve { perfil: {...datos_usuario}, mensaje: ... }
+        if (responseBody.containsKey('perfil')) {
+          // Devuelve el mapa con los datos del perfil (id, nombre, correo, etc.)
+          return responseBody['perfil'];
+        } else {
+          throw Exception(
+            'Respuesta de perfil válida, pero falta la clave "perfil".',
+          );
+        }
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        // Token inválido o expirado -> Forzar cierre de sesión y notificar
+        await logout();
+        throw Exception(
+          'Sesión expirada o token inválido. Vuelva a iniciar sesión.',
+        );
+      } else {
+        // Otro error del servidor (ej. 500)
+        String errorDetail = response.body.isNotEmpty
+            ? jsonDecode(response.body)['error'] ??
+                  'Error desconocido del servidor.'
+            : 'Error desconocido (Código HTTP: ${response.statusCode})';
+
+        throw Exception('Fallo al cargar el perfil: $errorDetail');
+      }
+    } on SocketException {
+      throw Exception(
+        'No se pudo conectar con el servidor. Verifica tu conexión a internet.',
+      );
+    } catch (e) {
+      throw Exception(
+        'Ocurrió un error inesperado al obtener el perfil: ${e.toString()}',
+      );
     }
   }
 }

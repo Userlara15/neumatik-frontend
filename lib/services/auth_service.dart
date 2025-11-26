@@ -5,7 +5,7 @@ import 'dart:io'; // Necesario para SocketException, esencial para manejo de red
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../models/usuario.dart'; // Mantenemos el import de Usuario
+import '../models/usuario.dart';
 import '../models/usuario_autenticado.dart';
 
 class AuthService {
@@ -13,9 +13,9 @@ class AuthService {
   static const String _baseUrl = 'https://neumatik-backend.up.railway.app';
   static const String _tokenKey = 'auth_token';
 
-  // Constantes para endpoints
+  // Constantes para endpoints (COINCIDEN CON EL BACKEND DE EXPRESS.JS)
   final String _loginEndpoint = '/api/auth/login';
-  final String _registerEndpoint = '/api/auth/register';
+  final String _registerEndpoint = '/api/registro';
 
   // --------------------------------------------------------------------------
   // LÓGICA DE PERSISTENCIA (SharedPreferences) - Métodos privados
@@ -63,9 +63,9 @@ class AuthService {
       'nombre': nombre,
       'apellido': apellido,
       'correo': correo,
+      // Se cambia 'contraseña' por 'contrasena' para coincidir con el backend JS
       'contrasena': contrasena,
       'telefono': telefono,
-      // Usamos 'es_vendedor' según la convención snake_case común en backends.
       'es_vendedor': esVendedor,
     });
 
@@ -82,7 +82,7 @@ class AuthService {
 
         final authResult = UsuarioAutenticado.fromJson(responseBody);
 
-        await _saveToken(authResult.token); // <<-- Aquí se guarda el token
+        await _saveToken(authResult.token);
 
         return authResult;
       } else {
@@ -125,15 +125,13 @@ class AuthService {
   // LÓGICA DE LOGIN
   // --------------------------------------------------------------------------
 
-  // Mantenemos la firma con named arguments para compatibilidad con login_screen.dart
   Future<UsuarioAutenticado> loginUser({
     required String correo,
     required String contrasena,
   }) async {
     final url = Uri.parse('$_baseUrl$_loginEndpoint');
     final body = jsonEncode({
-      // Usamos 'correo' y 'contrasena' ya que tu código de login_screen las usa
-      // y coincide con la estructura de registro.
+      // Se usa 'contrasena' para coincidir con el backend JS
       'correo': correo,
       'contrasena': contrasena,
     });

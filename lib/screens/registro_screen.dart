@@ -1,107 +1,63 @@
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart'; //servicio de autenticación
-import '../models/usuario_autenticado.dart'; // Importa el modelo si es necesario para tipado
+import '../services/auth_service.dart';
+import '../models/usuario_autenticado.dart';
 
 class RegistroScreen extends StatefulWidget {
-  const RegistroScreen({super.key});
+  // Simulación de navegación: cuando el registro es exitoso, ir a la pantalla principal
+  final VoidCallback onSuccessfulRegistration;
+
+  const RegistroScreen({Key? key, required this.onSuccessfulRegistration})
+    : super(key: key);
 
   @override
-  State<RegistroScreen> createState() => _RegistroScreenState();
+  _RegistroScreenState createState() => _RegistroScreenState();
 }
 
 class _RegistroScreenState extends State<RegistroScreen> {
-  final AuthService _authService = AuthService();
   final _formKey = GlobalKey<FormState>();
+  final AuthService _authService = AuthService();
+  bool _isLoading = false;
+  bool _esVendedor = false;
 
-  // Controladores para los campos del formulario
+  // Controladores de texto para los campos del formulario
   final TextEditingController _nombreController = TextEditingController();
   final TextEditingController _apellidoController = TextEditingController();
   final TextEditingController _correoController = TextEditingController();
   final TextEditingController _contrasenaController = TextEditingController();
   final TextEditingController _telefonoController = TextEditingController();
 
-  // Estado del formulario
-  bool _isLoading = false;
-  bool _esVendedor = false; // Permite al usuario registrarse como vendedor
-
-  @override
-  void dispose() {
-    _nombreController.dispose();
-    _apellidoController.dispose();
-    _correoController.dispose();
-    _contrasenaController.dispose();
-    _telefonoController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _handleRegister() async {
+  Future<void> _submit() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
       });
 
-      final String nombre = _nombreController.text.trim();
-      final String apellido = _apellidoController.text.trim();
-      final String correo = _correoController.text.trim();
-      final String contrasena = _contrasenaController.text;
-      final String telefono = _telefonoController.text.trim();
-
       try {
-        // Ahora se espera que registerUser devuelva un objeto (UsuarioAutenticado) en éxito o null en fallo.
-        final result = await _authService.registerUser(
-          nombre: nombre,
-          apellido: apellido,
-          correo: correo,
-          contrasena: contrasena,
-          telefono: telefono,
+        await _authService.registerUser(
+          nombre: _nombreController.text,
+          apellido: _apellidoController.text,
+          correo: _correoController.text,
+          contrasena: _contrasenaController.text,
+          telefono: _telefonoController.text,
           esVendedor: _esVendedor,
         );
 
-        if (mounted) {
-          if (result != null) {
-            // Si retorna un objeto (que no es null) se asume éxito
-            // Registro exitoso, redirige al Home (el AuthService ya guardó el token)
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  '🎉 ¡Registro y Sesión Iniciada! Bienvenido a Neumatik.',
-                ),
-                backgroundColor: Colors.teal, // Color consistente con el éxito
-              ),
-            );
-            // Reemplazar la pila de navegación para ir a la ruta principal ('/home')
-            Navigator.of(
-              context,
-            ).pushNamedAndRemoveUntil('/home', (route) => false);
-          } else {
-            // El backend/servicio debe devolver null si falla lógicamente (ej. "correo ya existe")
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  '⚠️ Fallo en el registro. Verifica los datos o intenta con otro correo.',
-                ),
-                backgroundColor: Colors.orange, // Color de advertencia
-              ),
-            );
-          }
-        }
+        // Registro exitoso: navega a la siguiente pantalla
+        widget.onSuccessfulRegistration();
       } catch (e) {
-        if (mounted) {
-          // Captura errores de red o excepciones del servicio (fallo técnico)
-          final errorMessage = e.toString().replaceFirst('Exception: ', '');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('❌ Error al registrar: $errorMessage'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        // Mostrar error en un Snackbar
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              e.toString().replaceAll('Exception: ', ''),
+            ), // Muestra el mensaje de error del AuthService
+            backgroundColor: Colors.red,
+          ),
+        );
       } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
@@ -110,204 +66,122 @@ class _RegistroScreenState extends State<RegistroScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Registro de Usuario',
-          style: TextStyle(color: Colors.white),
-        ),
-        backgroundColor: Colors.teal, // Consistente con el LoginScreen
-        automaticallyImplyLeading: true,
+        title: const Text('Registro de Usuario'),
+        backgroundColor: Colors.blueGrey,
       ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Container(
-            padding: const EdgeInsets.all(20.0),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20.0),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Crea tu cuenta Neumatik',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blueGrey,
                 ),
-              ],
-            ),
-            constraints: const BoxConstraints(maxWidth: 450),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  const Text(
-                    'Crea tu Cuenta Neumatik',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.teal,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 30),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              _buildTextField(
+                _nombreController,
+                'Nombre',
+                validator: (v) => v!.isEmpty ? 'Ingresa tu nombre' : null,
+              ),
+              _buildTextField(_apellidoController, 'Apellido'),
+              _buildTextField(
+                _correoController,
+                'Correo Electrónico',
+                keyboardType: TextInputType.emailAddress,
+                validator: (v) => v!.isEmpty || !v.contains('@')
+                    ? 'Ingresa un correo válido'
+                    : null,
+              ),
+              _buildTextField(
+                _contrasenaController,
+                'Contraseña',
+                obscureText: true,
+                validator: (v) => v!.length < 6 ? 'Mínimo 6 caracteres' : null,
+              ),
+              _buildTextField(
+                _telefonoController,
+                'Teléfono',
+                keyboardType: TextInputType.phone,
+              ),
 
-                  // Campo Nombre
-                  TextFormField(
-                    controller: _nombreController,
-                    decoration: const InputDecoration(
-                      labelText: 'Nombre',
-                      prefixIcon: Icon(
-                        Icons.person_outline,
-                        color: Colors.teal,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                      ),
-                    ),
-                    validator: (value) => value == null || value.isEmpty
-                        ? 'El nombre es obligatorio.'
-                        : null,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Campo Apellido
-                  TextFormField(
-                    controller: _apellidoController,
-                    decoration: const InputDecoration(
-                      labelText: 'Apellido',
-                      prefixIcon: Icon(
-                        Icons.person_outline,
-                        color: Colors.teal,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                      ),
-                    ),
-                    validator: (value) => value == null || value.isEmpty
-                        ? 'El apellido es obligatorio.'
-                        : null,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Campo Correo
-                  TextFormField(
-                    controller: _correoController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      labelText: 'Correo Electrónico',
-                      prefixIcon: Icon(
-                        Icons.email_outlined,
-                        color: Colors.teal,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty)
-                        return 'El correo es obligatorio.';
-                      if (!value.contains('@'))
-                        return 'Ingresa un correo válido.';
-                      return null;
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Checkbox(
+                    value: _esVendedor,
+                    onChanged: (bool? newValue) {
+                      setState(() {
+                        _esVendedor = newValue ?? false;
+                      });
                     },
+                    activeColor: Colors.teal,
                   ),
-                  const SizedBox(height: 16),
-
-                  // Campo Contraseña
-                  TextFormField(
-                    controller: _contrasenaController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Contraseña',
-                      prefixIcon: Icon(Icons.lock_outline, color: Colors.teal),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                      ),
-                    ),
-                    validator: (value) => value == null || value.length < 6
-                        ? 'La contraseña debe tener al menos 6 caracteres.'
-                        : null,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Campo Teléfono (Opcional en el backend, pero lo pedimos)
-                  TextFormField(
-                    controller: _telefonoController,
-                    keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(
-                      labelText: 'Teléfono (Opcional)',
-                      prefixIcon: Icon(Icons.phone, color: Colors.teal),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Checkbox para Vendedor
-                  Row(
-                    children: [
-                      Checkbox(
-                        value: _esVendedor,
-                        onChanged: (bool? newValue) {
-                          setState(() {
-                            _esVendedor = newValue ?? false;
-                          });
-                        },
-                        activeColor: Colors.teal,
-                      ),
-                      const Text('Quiero registrarme como Vendedor'),
-                    ],
-                  ),
-                  const SizedBox(height: 30),
-
-                  // Botón de Registro
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _handleRegister,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.teal,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 5,
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text(
-                            'Registrarse',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                  ),
-                  const SizedBox(height: 15),
-
-                  // Enlace a Login
-                  TextButton(
-                    onPressed: () {
-                      // Simplemente regresa a la pantalla de login (que está debajo)
-                      Navigator.of(context).pop();
-                    },
-                    child: const Text(
-                      '¿Ya tienes cuenta? Inicia Sesión',
-                      style: TextStyle(color: Colors.teal), // Color consistente
-                    ),
-                  ),
+                  const Text('Quiero registrarme como vendedor'),
                 ],
               ),
-            ),
+              const SizedBox(height: 30),
+
+              _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(color: Colors.teal),
+                    )
+                  : ElevatedButton(
+                      onPressed: _submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.teal,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text(
+                        'Registrar',
+                        style: TextStyle(fontSize: 18, color: Colors.white),
+                      ),
+                    ),
+              const SizedBox(height: 15),
+              TextButton(
+                onPressed: () {
+                  // Simular navegación a Login (solo para demostración)
+                  Navigator.of(context).pop();
+                },
+                child: const Text('¿Ya tienes cuenta? Inicia sesión aquí'),
+              ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTextField(
+    TextEditingController controller,
+    String label, {
+    TextInputType keyboardType = TextInputType.text,
+    bool obscureText = false,
+    String? Function(String?)? validator,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: TextFormField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          filled: true,
+          fillColor: Colors.white,
+        ),
+        keyboardType: keyboardType,
+        obscureText: obscureText,
+        validator: validator ?? (value) => null,
       ),
     );
   }

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+// Importamos el modelo UsuarioAutenticado para el tipado, si existe.
+// Si no existe el modelo, esta línea debe eliminarse.
+// import '../models/usuario_autenticado.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -34,14 +37,13 @@ class _LoginScreenState extends State<LoginScreen> {
       final String contrasena = _contrasenaController.text;
 
       try {
-        // CORRECCIÓN 1: La función login usa argumentos posicionales
+        // Llamada al servicio con argumentos posicionales (correo, contrasena)
         final usuarioAutenticado = await _authService.login(correo, contrasena);
 
         if (mounted) {
-          // CORRECCIÓN 2: Si no hay excepción, el login fue exitoso.
-          // Usamos los datos del objeto retornado.
-
-          final userName = usuarioAutenticado.nombre; //esto no daba
+          // CORRECCIÓN: Accedemos directamente a la propiedad 'nombre' del objeto
+          // usuarioAutenticado, ya que no tiene una propiedad anidada 'usuario'.
+          final userName = usuarioAutenticado.nombre;
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -52,15 +54,15 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           );
 
-          // CORRECCIÓN 3: Redirigir a la ruta '/home' (o la ruta de Home definida)
+          // Redirigir al Home y eliminar el Login de la pila de navegación
+          // Se asume que '/home' es la ruta principal.
           Navigator.of(
             context,
           ).pushNamedAndRemoveUntil('/home', (route) => false);
         }
       } catch (e) {
         if (mounted) {
-          // Captura errores lanzados por el AuthService (ej. Credenciales inválidas)
-          // Se usa replaceFirst para limpiar el prefijo "Exception: " del mensaje.
+          // Captura errores lanzados por el AuthService (ej. Credenciales inválidas o conexión)
           final errorMessage = e.toString().replaceFirst('Exception: ', '');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -81,8 +83,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Navega a la pantalla de registro
   void _navigateToRegister() {
-    // Si tu ruta es '/register' debes usar esa.
-    // Usaremos '/register' como en el ejemplo anterior
+    // Se asume que '/register' es la ruta de registro.
     Navigator.of(context).pushNamed('/register');
   }
 

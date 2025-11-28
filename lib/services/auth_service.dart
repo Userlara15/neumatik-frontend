@@ -1,7 +1,6 @@
 // lib/services/auth_service.dart
 
 import 'dart:convert';
-import 'dart:io'; // Necesario para SocketException, esencial para manejo de red.
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -107,12 +106,12 @@ class AuthService {
 
         throw Exception('Fallo al registrar usuario: $errorDetail');
       }
-    } on SocketException {
+    } on http.ClientException {
       throw Exception(
         'No se pudo conectar con el servidor. Verifica tu conexión a internet.',
       );
     } catch (e) {
-      throw Exception(
+      throw Exception( // Captura otros errores como timeouts o errores de formato.
         'Ocurrió un error inesperado durante el registro: ${e.toString()}',
       );
     }
@@ -155,11 +154,11 @@ class AuthService {
             'Credenciales inválidas o error desconocido.';
         throw Exception('Fallo al iniciar sesión: $errorDetail');
       }
-    } on SocketException {
+    } on http.ClientException {
       throw Exception(
         'No se pudo conectar con el servidor para iniciar sesión. Verifica tu conexión.',
       );
-    } on FormatException {
+    } on FormatException { // Este error es válido en todas las plataformas.
       throw Exception(
         'Respuesta inesperada del servidor (formato JSON inválido).',
       );
@@ -218,12 +217,12 @@ class AuthService {
 
         throw Exception('Fallo al cargar el perfil: $errorDetail');
       }
-    } on SocketException {
+    } on http.ClientException {
       throw Exception(
         'No se pudo conectar con el servidor. Verifica tu conexión a internet.',
       );
     } catch (e) {
-      throw Exception(
+      throw Exception( // Captura otros errores.
         'Ocurrió un error inesperado al obtener el perfil: ${e.toString()}',
       );
     }

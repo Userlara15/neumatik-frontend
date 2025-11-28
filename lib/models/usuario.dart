@@ -12,6 +12,8 @@ class Usuario {
   final String? telefono;
   final bool esVendedor;
 
+//estos son los usuarios normales xddd
+
   Usuario({
     required this.id,
     required this.nombre,

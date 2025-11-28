@@ -242,7 +242,7 @@ class AuthService {
             ? jsonDecode(response.body)['error'] ??
                   'Error desconocido del servidor.'
             : 'Error desconocido (Código HTTP: ${response.statusCode})';
-
+        //pruebaa xddd
         throw Exception('Fallo al cargar el perfil: $errorDetail');
       }
     } on SocketException {

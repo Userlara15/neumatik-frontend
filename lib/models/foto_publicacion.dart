@@ -1,4 +1,5 @@
 // Modelo para una foto asociada a una Publicación
+// fotos
 class FotoPublicacion {
   final String fotoId;
   final String publicacionId;

@@ -2,6 +2,7 @@
 
 import 'usuario.dart'; // Importa el modelo Usuario
 
+//este es el usuario autenticado
 class UsuarioAutenticado {
   final String token;
   final Usuario user; // Contiene la información del usuario

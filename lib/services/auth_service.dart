@@ -5,7 +5,6 @@ import 'dart:io'; // Necesario para SocketException, esencial para manejo de red
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../models/usuario.dart';
 import '../models/usuario_autenticado.dart';
 
 class AuthService {
@@ -71,8 +70,9 @@ class AuthService {
       'es_vendedor': esVendedor,
     });
 
+    http.Response response = http.Response('', 0);
     try {
-      final response = await http.post(
+      response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: body,
@@ -90,8 +90,8 @@ class AuthService {
             : null;
 
         if (decoded == null || decoded is! Map<String, dynamic>) {
-          throw Exception(
-              'Respuesta inesperada del servidor al registrar (body nulo o no es un objeto JSON).');
+              throw Exception(
+                'Respuesta inesperada del servidor al registrar (body nulo o no es un objeto JSON). Body: ${response.body}\nHeaders: ${response.headers}');
         }
 
         // Asumiendo que el campo 'token' se encuentra en el nivel superior del body de respuesta.
@@ -146,8 +146,9 @@ class AuthService {
     final url = Uri.parse('$_baseUrl$_loginEndpoint');
     final body = jsonEncode({'correo': correo, 'contrasena': contrasena});
 
+    http.Response response = http.Response('', 0);
     try {
-      final response = await http.post(
+      response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: body,
@@ -163,7 +164,7 @@ class AuthService {
         // 200 OK: Inicio de sesión exitoso
 
         if (decoded == null || decoded is! Map<String, dynamic>) {
-          throw Exception('Respuesta inesperada del servidor al iniciar sesión.');
+          throw Exception('Respuesta inesperada del servidor al iniciar sesión. Body: ${response.body}\nHeaders: ${response.headers}');
         }
 
         final authResult = UsuarioAutenticado.fromJson(decoded);
@@ -188,7 +189,7 @@ class AuthService {
       );
     } on FormatException {
       throw Exception(
-        'Respuesta inesperada del servidor (formato JSON inválido).',
+        'Respuesta inesperada del servidor (formato JSON inválido). Body: ${response.body}\nHeaders: ${response.headers}',
       );
     } catch (e) {
       throw Exception('Ocurrió un error de conexión: ${e.toString()}');

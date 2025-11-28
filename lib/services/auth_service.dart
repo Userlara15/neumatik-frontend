@@ -78,12 +78,24 @@ class AuthService {
         body: body,
       );
 
+      // DEBUG: imprimir status y body para ayudar a depuración en tiempo de ejecución
+      // (se puede eliminar después de resolver el problema)
+      // ignore: avoid_print
+      print('[AuthService.registerUser] HTTP ${response.statusCode} - Body: ${response.body}');
+
       // 1. Manejo de respuesta exitosa (201 Created)
       if (response.statusCode == 201) {
-        final Map<String, dynamic> responseBody = jsonDecode(response.body);
+        final dynamic decoded = response.body.isNotEmpty
+            ? jsonDecode(response.body)
+            : null;
+
+        if (decoded == null || decoded is! Map<String, dynamic>) {
+          throw Exception(
+              'Respuesta inesperada del servidor al registrar (body nulo o no es un objeto JSON).');
+        }
 
         // Asumiendo que el campo 'token' se encuentra en el nivel superior del body de respuesta.
-        final authResult = UsuarioAutenticado.fromJson(responseBody);
+        final authResult = UsuarioAutenticado.fromJson(decoded);
 
         await _saveToken(authResult.token);
 
@@ -94,13 +106,17 @@ class AuthService {
             'Error desconocido (Código HTTP: ${response.statusCode})';
 
         try {
-          final Map<String, dynamic> responseBody = jsonDecode(response.body);
+          final dynamic decoded = response.body.isNotEmpty
+              ? jsonDecode(response.body)
+              : null;
 
-          errorDetail =
-              responseBody['message'] ??
-              responseBody['detail'] ??
-              responseBody['error'] ??
-              errorDetail;
+          if (decoded is Map<String, dynamic>) {
+            errorDetail =
+                decoded['message'] ?? decoded['detail'] ?? decoded['error'] ?? errorDetail;
+          } else {
+            // Si el servidor envía un string o null, lo mostramos tal cual
+            errorDetail = response.body.isNotEmpty ? response.body : errorDetail;
+          }
         } on FormatException {
           errorDetail =
               'Error del servidor, no es formato JSON. Código: ${response.statusCode}';
@@ -137,23 +153,33 @@ class AuthService {
         body: body,
       );
 
-      final Map<String, dynamic> responseBody = jsonDecode(response.body);
+      // DEBUG: imprimir status y body para depuración
+      // ignore: avoid_print
+      print('[AuthService.loginUser] HTTP ${response.statusCode} - Body: ${response.body}');
+
+      final dynamic decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
 
       if (response.statusCode == 200) {
         // 200 OK: Inicio de sesión exitoso
 
-        final authResult = UsuarioAutenticado.fromJson(responseBody);
+        if (decoded == null || decoded is! Map<String, dynamic>) {
+          throw Exception('Respuesta inesperada del servidor al iniciar sesión.');
+        }
+
+        final authResult = UsuarioAutenticado.fromJson(decoded);
 
         await _saveToken(authResult.token);
 
         return authResult;
       } else {
         // Manejar errores (ej: credenciales inválidas, 401 Unauthorized)
-        final errorDetail =
-            responseBody['message'] ??
-            responseBody['detail'] ??
-            responseBody['error'] ??
-            'Credenciales inválidas o error desconocido.';
+        String errorDetail = 'Credenciales inválidas o error desconocido.';
+        if (decoded is Map<String, dynamic>) {
+          errorDetail = decoded['message'] ?? decoded['detail'] ?? decoded['error'] ?? errorDetail;
+        } else if (response.body.isNotEmpty) {
+          errorDetail = response.body;
+        }
+
         throw Exception('Fallo al iniciar sesión: $errorDetail');
       }
     } on SocketException {

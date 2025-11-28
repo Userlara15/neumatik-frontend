@@ -12,6 +12,8 @@ class Usuario {
   final String? telefono;
   final bool esVendedor;
 
+//estos son los usuarios normales xddd
+
   Usuario({
     required this.id,
     required this.nombre,
@@ -25,27 +27,26 @@ class Usuario {
 
   // Factory para crear una instancia de Usuario a partir de un mapa JSON
   factory Usuario.fromJson(Map<String, dynamic> json) {
-    // Maneja 'id' o 'user_id' y asegura que sea un String,
-    // ya sea que venga como String o int del backend.
     final rawId = json['id'] ?? json['user_id'];
     final idString = rawId != null ? rawId.toString() : '';
 
-    // Lógica robusta para 'esVendedor'
-    final esVendedorRaw = json['es_vendedor'] ?? json['esVendedor'] ?? false;
+    final nombre = json['nombre']?.toString() ?? '';
+    final apellido = json['apellido']?.toString() ?? '';
+    final correo = json['correo']?.toString() ?? '';
+
+    final telefono = json['telefono'] == null ? null : json['telefono'].toString();
+
+    final esVendedorRaw = json['es_vendedor'] ?? json['esVendedor'] ?? json['vendedor'] ?? false;
     final bool isSeller = esVendedorRaw is bool
         ? esVendedorRaw
-        : esVendedorRaw == 1 ||
-              esVendedorRaw.toString().toLowerCase() == 'true';
+        : (esVendedorRaw.toString() == '1' || esVendedorRaw.toString().toLowerCase() == 'true');
 
     return Usuario(
       id: idString,
-      nombre: json['nombre'] as String,
-      // Al deserializar, asumimos que el backend siempre devuelve un apellido no nulo
-      // debido a la restricción NOT NULL en la base de datos.
-      apellido: json['apellido'] as String,
-      correo: json['correo'] as String,
-      // Se permite que sea nulo si no viene del JSON o viene como null
-      telefono: json['telefono'] as String?,
+      nombre: nombre,
+      apellido: apellido,
+      correo: correo,
+      telefono: telefono,
       esVendedor: isSeller,
     );
   }

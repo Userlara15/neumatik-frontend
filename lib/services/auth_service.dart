@@ -5,7 +5,6 @@ import 'dart:io'; // Necesario para SocketException, esencial para manejo de red
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../models/usuario.dart';
 import '../models/usuario_autenticado.dart';
 
 class AuthService {
@@ -71,30 +70,64 @@ class AuthService {
       'es_vendedor': esVendedor,
     });
 
+    http.Response response = http.Response('', 0);
     try {
-      final response = await http.post(
+      response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: body,
       );
 
+      // DEBUG: imprimir status y body para ayudar a depuración en tiempo de ejecución
+      // (se puede eliminar después de resolver el problema)
+      // ignore: avoid_print
+      print('[AuthService.registerUser] HTTP ${response.statusCode} - Body: ${response.body}');
+
       // 1. Manejo de respuesta exitosa (201 Created)
       if (response.statusCode == 201) {
-        final Map<String, dynamic> responseBody = jsonDecode(response.body);
+        final dynamic decoded = response.body.isNotEmpty
+            ? jsonDecode(response.body)
+            : null;
+
+        if (decoded == null || decoded is! Map<String, dynamic>) {
+              throw Exception(
+                'Respuesta inesperada del servidor al registrar (body nulo o no es un objeto JSON). Body: ${response.body}\nHeaders: ${response.headers}');
+        }
 
         // Asumiendo que el campo 'token' se encuentra en el nivel superior del body de respuesta.
-        final authResult = UsuarioAutenticado.fromJson(responseBody);
+        final authResult = UsuarioAutenticado.fromJson(decoded);
 
         await _saveToken(authResult.token);
 
         return authResult;
       } else {
         // 2. Manejo de códigos de error (4xx, 5xx)
+<<<<<<< HEAD
         // SOLUCIÓN: Validar si la respuesta tiene cuerpo antes de decodificar.
         if (response.body.isEmpty) {
           throw Exception(
             'Error en el registro. El servidor respondió con un error pero sin detalles (Código: ${response.statusCode})',
           );
+=======
+        String errorDetail =
+            'Error desconocido (Código HTTP: ${response.statusCode})';
+
+        try {
+          final dynamic decoded = response.body.isNotEmpty
+              ? jsonDecode(response.body)
+              : null;
+
+          if (decoded is Map<String, dynamic>) {
+            errorDetail =
+                decoded['message'] ?? decoded['detail'] ?? decoded['error'] ?? errorDetail;
+          } else {
+            // Si el servidor envía un string o null, lo mostramos tal cual
+            errorDetail = response.body.isNotEmpty ? response.body : errorDetail;
+          }
+        } on FormatException {
+          errorDetail =
+              'Error del servidor, no es formato JSON. Código: ${response.statusCode}';
+>>>>>>> 3d735dc7b8d8d511cab94dd9fadfd4c5272f633f
         }
 
         // SOLUCIÓN: Manejar respuestas de error que no son JSON.
@@ -134,23 +167,42 @@ class AuthService {
     final url = Uri.parse('$_baseUrl$_loginEndpoint');
     final body = jsonEncode({'correo': correo, 'contrasena': contrasena});
 
+    http.Response response = http.Response('', 0);
     try {
-      final response = await http.post(
+      response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: body,
       );
 
+<<<<<<< HEAD
       if (response.statusCode == 200) {
         // 200 OK: Inicio de sesión exitoso
         // Solo decodificamos y procesamos el cuerpo si la respuesta es exitosa.
         final Map<String, dynamic> responseBody = jsonDecode(response.body);
         final authResult = UsuarioAutenticado.fromJson(responseBody);
+=======
+      // DEBUG: imprimir status y body para depuración
+      // ignore: avoid_print
+      print('[AuthService.loginUser] HTTP ${response.statusCode} - Body: ${response.body}');
+
+      final dynamic decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+
+      if (response.statusCode == 200) {
+        // 200 OK: Inicio de sesión exitoso
+
+        if (decoded == null || decoded is! Map<String, dynamic>) {
+          throw Exception('Respuesta inesperada del servidor al iniciar sesión. Body: ${response.body}\nHeaders: ${response.headers}');
+        }
+
+        final authResult = UsuarioAutenticado.fromJson(decoded);
+>>>>>>> 3d735dc7b8d8d511cab94dd9fadfd4c5272f633f
 
         await _saveToken(authResult.token);
 
         return authResult;
       } else {
+<<<<<<< HEAD
         // Manejo de errores (401, 400, etc.)
         // SOLUCIÓN: Validar si la respuesta tiene cuerpo antes de decodificar.
         if (response.body.isEmpty) {
@@ -172,6 +224,17 @@ class AuthService {
           // Si no es JSON, el cuerpo de la respuesta es el error (ej. "Credenciales inválidas").
           throw Exception(response.body);
         }
+=======
+        // Manejar errores (ej: credenciales inválidas, 401 Unauthorized)
+        String errorDetail = 'Credenciales inválidas o error desconocido.';
+        if (decoded is Map<String, dynamic>) {
+          errorDetail = decoded['message'] ?? decoded['detail'] ?? decoded['error'] ?? errorDetail;
+        } else if (response.body.isNotEmpty) {
+          errorDetail = response.body;
+        }
+
+        throw Exception('Fallo al iniciar sesión: $errorDetail');
+>>>>>>> 3d735dc7b8d8d511cab94dd9fadfd4c5272f633f
       }
     } on SocketException {
       throw Exception(
@@ -179,7 +242,7 @@ class AuthService {
       );
     } on FormatException {
       throw Exception(
-        'Respuesta inesperada del servidor (formato JSON inválido).',
+        'Respuesta inesperada del servidor (formato JSON inválido). Body: ${response.body}\nHeaders: ${response.headers}',
       );
     } catch (e) {
       // Limpiamos el mensaje de error para que sea más legible.
@@ -236,7 +299,7 @@ class AuthService {
             ? jsonDecode(response.body)['error'] ??
                   'Error desconocido del servidor.'
             : 'Error desconocido (Código HTTP: ${response.statusCode})';
-
+        //pruebaa xddd
         throw Exception('Fallo al cargar el perfil: $errorDetail');
       }
     } on SocketException {

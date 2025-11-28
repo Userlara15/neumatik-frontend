@@ -165,9 +165,7 @@ class AuthService {
         'Respuesta inesperada del servidor (formato JSON inválido).',
       );
     } catch (e) {
-      throw Exception(
-        'Ocurrió un error inesperado durante el login: ${e.toString()}',
-      );
+      throw Exception('Ocurrió un error de conexión: ${e.toString()}');
     }
   }
 

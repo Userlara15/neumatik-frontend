@@ -1,97 +1,164 @@
 import 'package:flutter/material.dart';
+import '../models/publicacion_autoparte.dart';
+import '../services/publicacion_service.dart';
 
 // RUTA ASIGNADA: '/' (Ruta inicial)
 // FUNCIÓN: Muestra el catálogo principal de autopartes.
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  // Usamos el servicio de publicaciones correcto.
+  final PublicacionService _publicacionService = PublicacionService();
+  late Future<List<PublicacionAutoparte>> _publicacionesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _publicacionesFuture = _publicacionService.getPublicacionesActivas();
+  }
+
+  // Función para recargar los datos con RefreshIndicator
+  Future<void> _reloadData() async {
+    setState(() {
+      _publicacionesFuture = _publicacionService.getPublicacionesActivas();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Neumatik | Catálogo de Autopartes'),
+        title: const Text('Neumatik: Autopartes en Venta'),
         backgroundColor: Colors.teal,
         actions: [
           IconButton(
-            icon: const Icon(Icons.shopping_cart),
-            onPressed: () => Navigator.pushNamed(context, '/carrito'),
+            icon: const Icon(Icons.person),
+            tooltip: 'Mi Perfil',
+            onPressed: () {
+              Navigator.pushNamed(context, '/perfil');
+            },
           ),
           IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () => Navigator.pushNamed(context, '/perfil'),
+            icon: const Icon(Icons.camera_alt_outlined),
+            tooltip: 'Reconocimiento por IA',
+            onPressed: () {
+              Navigator.pushNamed(context, '/ia-reconocimiento');
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.shopping_cart_outlined),
+            tooltip: 'Carrito de Compras',
+            onPressed: () {
+              Navigator.pushNamed(context, '/carrito');
+            },
           ),
         ],
       ),
-      drawer: _AppDrawer(context),
-      body: const Center(
-        child: Padding(
-          padding: EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.directions_car, size: 80, color: Colors.teal),
-              SizedBox(height: 16),
-              Text(
-                'Bienvenido a Neumatik',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 8),
-              Text(
-                'Aquí se mostrará el listado de autopartes (Tabla: publicaciones).',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            ],
-          ),
+      body: RefreshIndicator(
+        onRefresh: _reloadData,
+        color: Colors.teal,
+        child: FutureBuilder<List<PublicacionAutoparte>>(
+          future: _publicacionesFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (snapshot.hasError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    'Error al cargar publicaciones: ${snapshot.error.toString().replaceFirst("Exception: ", "")}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ),
+              );
+            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return const Center(
+                child: Text('No hay publicaciones disponibles.'),
+              );
+            }
+
+            final publicaciones = snapshot.data!;
+            return ListView.builder(
+              itemCount: publicaciones.length,
+              itemBuilder: (context, index) {
+                final publicacion = publicaciones[index];
+                return InkWell(
+                  onTap: () {
+                    Navigator.pushNamed(
+                      context,
+                      '/publicacion',
+                      arguments: publicacion.publicacionId,
+                    );
+                  },
+                  child: AutoparteCard(publicacion: publicacion),
+                );
+              },
+            );
+          },
         ),
       ),
     );
   }
 }
 
-// Widget del menú lateral (Drawer)
-Widget _AppDrawer(BuildContext context) {
-  return Drawer(
-    child: ListView(
-      padding: EdgeInsets.zero,
-      children: <Widget>[
-        const DrawerHeader(
-          decoration: BoxDecoration(color: Colors.teal),
-          child: Text(
-            'Menú Neumatik',
-            style: TextStyle(color: Colors.white, fontSize: 24),
+// Widget para el diseño de cada tarjeta de autoparte
+class AutoparteCard extends StatelessWidget {
+  final PublicacionAutoparte publicacion;
+
+  const AutoparteCard({Key? key, required this.publicacion}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      elevation: 3,
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: ListTile(
+          leading: SizedBox(
+            width: 80,
+            height: 80,
+            child: Image.network(
+              publicacion.fotoPrincipalUrl,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return const Center(child: CircularProgressIndicator());
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return const Icon(Icons.car_crash, color: Colors.grey);
+              },
+            ),
           ),
+          title: Text(
+            publicacion.nombreParte,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '\$${publicacion.precio.toStringAsFixed(2)} - ${publicacion.condicion}',
+              ),
+              Text(
+                'Vendido por: ${publicacion.vendedorNombreCompleto}',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ],
+          ),
+          trailing: publicacion.iaVerificado
+              ? const Icon(Icons.verified, color: Colors.blue)
+              : null,
+          isThreeLine: true,
         ),
-        ListTile(
-          leading: const Icon(Icons.home),
-          title: const Text('Catálogo Principal'),
-          onTap: () {
-            Navigator.popUntil(context, ModalRoute.withName('/'));
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.account_circle),
-          title: const Text('Perfil / Dashboard'),
-          onTap: () {
-            Navigator.pushNamed(context, '/perfil');
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.shopping_cart),
-          title: const Text('Carrito de Compras'),
-          onTap: () {
-            Navigator.pushNamed(context, '/carrito');
-          },
-        ),
-        const Divider(),
-        ListTile(
-          leading: const Icon(Icons.camera_alt),
-          title: const Text('Herramienta IA (Reconocimiento)'),
-          onTap: () {
-            Navigator.pushNamed(context, '/ia-reconocimiento');
-          },
-        ),
-      ],
-    ),
-  );
+      ),
+    );
+  }
 }

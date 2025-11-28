@@ -97,16 +97,20 @@ class AuthService {
           );
         }
 
-        final Map<String, dynamic> errorBody = jsonDecode(response.body);
-        final errorMessage =
-            errorBody['message'] ??
-            errorBody['detail'] ??
-            errorBody['error'] ??
-            'Ocurrió un error desconocido.';
-
-        // Lanza una excepción con el mensaje de error del backend.
-        // Ejemplo: "El correo ya está en uso."
-        throw Exception(errorMessage);
+        // SOLUCIÓN: Manejar respuestas de error que no son JSON.
+        // Intentamos decodificar, si falla, usamos el cuerpo de la respuesta como texto plano.
+        try {
+          final Map<String, dynamic> errorBody = jsonDecode(response.body);
+          final errorMessage =
+              errorBody['message'] ??
+              errorBody['detail'] ??
+              errorBody['error'] ??
+              'Ocurrió un error desconocido.';
+          throw Exception(errorMessage);
+        } catch (e) {
+          // Si no es JSON, el cuerpo de la respuesta es el error (ej. "Credenciales inválidas").
+          throw Exception(response.body);
+        }
       }
     } on SocketException {
       throw Exception(
@@ -154,15 +158,20 @@ class AuthService {
             'Credenciales inválidas o error del servidor (Código: ${response.statusCode})',
           );
         }
-        // Decodificamos el cuerpo para obtener el mensaje de error específico del backend.
-        final Map<String, dynamic> errorBody = jsonDecode(response.body);
-        final errorMessage =
-            errorBody['message'] ??
-            errorBody['detail'] ??
-            'Credenciales inválidas o error desconocido.';
 
-        // Lanza una excepción con el mensaje claro del backend.
-        throw Exception(errorMessage);
+        // SOLUCIÓN: Manejar respuestas de error que no son JSON.
+        // Intentamos decodificar, si falla, usamos el cuerpo de la respuesta como texto plano.
+        try {
+          final Map<String, dynamic> errorBody = jsonDecode(response.body);
+          final errorMessage =
+              errorBody['message'] ??
+              errorBody['detail'] ??
+              'Credenciales inválidas o error desconocido.';
+          throw Exception(errorMessage);
+        } catch (e) {
+          // Si no es JSON, el cuerpo de la respuesta es el error (ej. "Credenciales inválidas").
+          throw Exception(response.body);
+        }
       }
     } on SocketException {
       throw Exception(

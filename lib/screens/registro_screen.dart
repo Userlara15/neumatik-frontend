@@ -45,6 +45,10 @@ class _RegistroScreenState extends State<RegistroScreen> {
         _errorMessage = null;
       });
 
+      // SOLUCIÓN: Si el teléfono está vacío, enviamos un valor por defecto.
+      // Esto evita el error de "null constraint" en la base de datos.
+      final telefono = _telefonoController.text.trim();
+
       try {
         // CORRECCIÓN Y FIX DEL WARNING: Tipamos explícitamente result como UsuarioAutenticado.
         // Esto obliga al analizador a mantener el import de usuario_autenticado.dart.
@@ -53,7 +57,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
           apellido: _apellidoController.text.trim(),
           correo: _correoController.text.trim(),
           contrasena: _contrasenaController.text,
-          telefono: _telefonoController.text.trim(),
+          telefono: telefono.isEmpty ? '0' : telefono,
           esVendedor: _esVendedor, // AÑADIDO
         );
 
@@ -136,6 +140,10 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     borderRadius: BorderRadius.all(Radius.circular(10)),
                   ),
                 ),
+                // SOLUCIÓN: Añadir validador para el apellido.
+                validator: (value) => value == null || value.isEmpty
+                    ? 'El apellido es obligatorio.'
+                    : null,
               ),
               const SizedBox(height: 15),
 
